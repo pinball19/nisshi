@@ -1,9 +1,13 @@
 /* 共通スタイル */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
-/* ローディング表示 */
+/* ローディング表示 - 緊急対応として初期状態で非表示に */
+#loader {
+  display: none !important;
+}
+
 .loader {
   border: 5px solid #f3f3f3;
   border-radius: 50%;

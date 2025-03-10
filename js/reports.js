@@ -264,6 +264,18 @@ async function handleSaveReport(e) {
         });
         allClients.push(clientName);
       }
+    } else {
+      // 更新
+      await db.collection('reports').doc(currentReportId).update(reportData);
+      
+      // クライアント名が新規の場合は保存
+      if (!allClients.includes(clientName)) {
+        await db.collection('clients').add({
+          name: clientName,
+          addedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        allClients.push(clientName);
+      }
     }
     
     // 日報一覧を再読み込み
@@ -383,16 +395,4 @@ function initReports() {
   
   // 日付の初期設定
   document.getElementById('reportDate').valueAsDate = new Date();
-}保存
-      if (!allClients.includes(clientName)) {
-        await db.collection('clients').add({
-          name: clientName,
-          addedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        allClients.push(clientName);
-      }
-    } else {
-      // 更新
-      await db.collection('reports').doc(currentReportId).update(reportData);
-      
-      // クライアント名が新規の場合は
+}

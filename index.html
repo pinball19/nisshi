@@ -26,7 +26,7 @@
             <form id="loginForm">
               <div class="mb-3">
                 <label for="employeeId" class="form-label">社員番号</label>
-                <input type="text" class="form-control" id="employeeId" required>
+                <input type="text" class="form-control" id="employeeId" placeholder="例: 1001" required>
               </div>
               <div class="mb-3">
                 <label for="password" class="form-label">パスワード</label>
@@ -212,5 +212,21 @@
   <script src="js/comments.js"></script>
   <script src="js/reports.js"></script>
   <script src="js/app.js"></script>
+  
+  <!-- デバッグ用スクリプト - ローダーが表示されたままになる問題の対策 -->
+  <script>
+    // ページ読み込み完了時に実行されるバックアップ処理
+    window.onload = function() {
+      console.log('ページ読み込み完了');
+      // ローダーが表示されたままの場合、1秒後に強制的に非表示
+      setTimeout(function() {
+        if (!document.getElementById('loader').classList.contains('hidden')) {
+          console.log('ローダーを強制的に非表示');
+          document.getElementById('loader').classList.add('hidden');
+          document.getElementById('loginContainer').classList.remove('hidden');
+        }
+      }, 1000);
+    };
+  </script>
 </body>
 </html>

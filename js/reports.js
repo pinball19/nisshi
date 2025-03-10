@@ -29,12 +29,76 @@ async function loadReports() {
       });
     });
     
+    // コメント通知情報の読み込み
+    await loadCommentsNotifications();
+    
     renderReportsList(allReports);
     hideLoader();
   } catch (error) {
     console.error('日報データの読み込みエラー:', error);
     showError('日報データの読み込みに失敗しました');
     hideLoader();
+  }
+}
+
+// コメント通知情報の読み込み
+async function loadCommentsNotifications() {
+  try {
+    // 各日報の最新コメントとユーザーの既読状態を確認
+    for (let i = 0; i < allReports.length; i++) {
+      const report = allReports[i];
+      
+      // コメントのサブコレクションを取得
+      const commentsSnapshot = await db.collection('reports').doc(report.id)
+        .collection('comments')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+      
+      if (!commentsSnapshot.empty) {
+        const latestComment = commentsSnapshot.docs[0].data();
+        
+        // 最新コメントの情報を日報に追加
+        report.latestComment = {
+          id: commentsSnapshot.docs[0].id,
+          authorId: latestComment.authorId,
+          createdAt: latestComment.createdAt
+        };
+        
+        // 既読情報の取得
+        const readStatusDoc = await db.collection('reports').doc(report.id)
+          .collection('readStatus')
+          .doc(currentUser.id)
+          .get();
+        
+        if (readStatusDoc.exists) {
+          const readStatus = readStatusDoc.data();
+          
+          // 最新コメントの作成日時と既読日時を比較
+          if (readStatus.lastReadAt && 
+              latestComment.createdAt && 
+              readStatus.lastReadAt.seconds >= latestComment.createdAt.seconds) {
+            // 既読の場合
+            report.hasUnreadComments = false;
+          } else {
+            // 未読の場合
+            report.hasUnreadComments = true;
+          }
+        } else {
+          // 既読情報がない場合は未読
+          report.hasUnreadComments = true;
+        }
+        
+        // 自分のコメントは既読扱い
+        if (latestComment.authorId === currentUser.id) {
+          report.hasUnreadComments = false;
+        }
+      } else {
+        report.hasUnreadComments = false;
+      }
+    }
+  } catch (error) {
+    console.error('コメント通知情報の読み込みエラー:', error);
   }
 }
 
@@ -66,13 +130,22 @@ function renderReportsList(reports) {
     
     const item = document.createElement('a');
     item.className = 'list-group-item list-group-item-action';
+    
+    // 未読コメントがある場合、クラスを追加
+    if (report.hasUnreadComments) {
+      item.classList.add('border-danger');
+    }
+    
     item.innerHTML = `
       <div class="d-flex w-100 justify-content-between">
         <h6 class="mb-1">${report.clientName}</h6>
         <small>${formattedDate}</small>
       </div>
       <p class="mb-1">${report.purpose}</p>
-      <small>${report.authorName}</small>
+      <div class="d-flex justify-content-between align-items-center">
+        <small>${report.authorName}</small>
+        ${report.hasUnreadComments ? '<span class="badge bg-danger">新着コメント</span>' : ''}
+      </div>
     `;
     
     item.addEventListener('click', () => {
@@ -108,12 +181,39 @@ async function loadReportDetail(reportId) {
     };
     
     renderReportDetail(report);
-    loadComments(reportId);
+    await loadComments(reportId);
+    
+    // コメントを読んだら既読状態を更新
+    await updateReadStatus(reportId);
+    
+    // リストの表示を更新（通知バッジを消す）
+    const reportIndex = allReports.findIndex(r => r.id === reportId);
+    if (reportIndex >= 0) {
+      allReports[reportIndex].hasUnreadComments = false;
+      renderReportsList(allReports);
+    }
+    
     hideLoader();
   } catch (error) {
     console.error('日報詳細の読み込みエラー:', error);
     showError('日報詳細の読み込みに失敗しました');
     hideLoader();
+  }
+}
+
+// コメント既読状態の更新
+async function updateReadStatus(reportId) {
+  try {
+    await db.collection('reports').doc(reportId)
+      .collection('readStatus')
+      .doc(currentUser.id)
+      .set({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        lastReadAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+  } catch (error) {
+    console.error('既読状態の更新エラー:', error);
   }
 }
 

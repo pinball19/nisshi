@@ -1,11 +1,12 @@
 // Firebase設定
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBICy52kNVrkK_qOwo9o8j4xcFVBLyyhcU",
+  authDomain: "nisshi-e8110.firebaseapp.com",
+  projectId: "nisshi-e8110",
+  storageBucket: "nisshi-e8110.firebasestorage.app",
+  messagingSenderId: "147725626433",
+  appId: "1:147725626433:web:6b8f7f1ff93a313a786ac0",
+  measurementId: "G-V8DJ3LF5NK"
 };
 
 // Firebaseの初期化

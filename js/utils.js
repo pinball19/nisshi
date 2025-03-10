@@ -34,5 +34,6 @@ function formatDateTime(timestamp) {
 
 // エラー表示
 function showError(message) {
+  console.error(message);
   alert(message);
 }

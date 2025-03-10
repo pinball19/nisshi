@@ -21,12 +21,22 @@ async function loadComments(reportId) {
       const comment = doc.data();
       const commentDate = new Date(comment.createdAt.seconds * 1000);
       
+      const isAdmin = comment.authorId !== currentUser.id && 
+                       (comment.authorRole === 'admin' || 
+                        EMPLOYEE_CREDENTIALS[comment.authorId]?.role === 'admin');
+      
       const commentEl = document.createElement('div');
       commentEl.className = 'card mb-2';
+      
+      // 管理者からのコメントは強調表示
+      if (isAdmin) {
+        commentEl.classList.add('border-danger');
+      }
+      
       commentEl.innerHTML = `
-        <div class="card-body py-2">
+        <div class="card-body py-2 ${isAdmin ? 'bg-light' : ''}">
           <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="fw-bold">${comment.authorName}</span>
+            <span class="fw-bold ${isAdmin ? 'text-danger' : ''}">${comment.authorName} ${isAdmin ? '(管理者)' : ''}</span>
             <small class="text-muted">${commentDate.toLocaleString('ja-JP')}</small>
           </div>
           <p class="mb-0">${comment.text}</p>
@@ -55,14 +65,44 @@ async function handleAddComment(e) {
       text: commentText,
       authorId: currentUser.id,
       authorName: currentUser.name,
+      authorRole: currentUser.role,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
     await db.collection('reports').doc(currentReportId)
       .collection('comments').add(commentData);
     
+    // コメント対象の日報情報を取得
+    const reportDoc = await db.collection('reports').doc(currentReportId).get();
+    const reportData = reportDoc.data();
+    
+    // 自分以外のユーザーの既読状態をリセット
+    if (reportData && reportData.authorId !== currentUser.id) {
+      // 日報作成者の既読状態をリセット（自分が作成者でない場合）
+      await db.collection('reports').doc(currentReportId)
+        .collection('readStatus')
+        .doc(reportData.authorId)
+        .delete();
+    }
+    
+    // 管理者からのコメントの場合、未読としてマーク
+    if (isAdmin) {
+      // 全ての営業担当者の既読状態をリセット
+      for (const empId in EMPLOYEE_CREDENTIALS) {
+        if (EMPLOYEE_CREDENTIALS[empId].role === 'sales' && empId !== currentUser.id) {
+          await db.collection('reports').doc(currentReportId)
+            .collection('readStatus')
+            .doc(empId)
+            .delete();
+        }
+      }
+    }
+    
     document.getElementById('newComment').value = '';
-    loadComments(currentReportId);
+    await loadComments(currentReportId);
+    
+    // 自分の既読状態を更新
+    await updateReadStatus(currentReportId);
     
     hideLoader();
   } catch (error) {
